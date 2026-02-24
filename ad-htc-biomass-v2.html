@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MEG 315 — AD-HTC Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #f8f8f8;
+      color: #111;
+      min-height: 100vh;
+    }
+
+    code,
+    .mono {
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Layout */
+    .shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      background: #111;
+      color: #fff;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 2px solid #000;
+    }
+
+    .topbar h1 {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .topbar .sub {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 2px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #fff;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .3
+      }
+    }
+
+    .body-wrap {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+      padding: 20px 18px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #888;
+      border-bottom: 1px solid #e8e8e8;
+      padding-bottom: 5px;
+      margin-bottom: 12px;
+      margin-top: 18px;
+    }
+
+    .sidebar label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 4px;
+    }
+
+    .sidebar input[type=number],
+    .sidebar select {
+      width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 7px 10px;
+      font-size: 13px;
+      font-family: 'DM Mono', monospace;
+      background: #fafafa;
+      color: #111;
+      outline: none;
+      margin-bottom: 10px;
+      transition: border-color .15s;
+    }
+
+    .sidebar input:focus,
+    .sidebar select:focus {
+      border-color: #111;
+    }
+
+    .sidebar input[type=range] {
+      accent-color: #111;
+      margin-bottom: 4px;
+    }
+
+    .unit-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .unit-row input {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .unit-tag {
+      font-size: 11px;
+      color: #888;
+      font-family: 'DM Mono', monospace;
+      min-width: 42px;
+    }
+
+    .run-btn {
+      width: 100%;
+      margin-top: 16px;
+      padding: 11px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    .run-btn:hover {
+      background: #333;
+    }
+
+    .run-btn:active {
+      background: #000;
+      transform: scale(.98);
+    }
+
+    .assumptions {
+      margin-top: 16px;
+      padding: 12px;
+      background: #f4f4f4;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #666;
+      line-height: 1.6;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .assumptions strong {
+      color: #111;
+      display: block;
+      margin-bottom: 4px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+    }
+
+    /* Main panel */
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      background: #f8f8f8;
+    }
+
+    /* KPI cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .kpi-card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 14px 16px;
+    }
+
+    .kpi-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .kpi-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111;
+      font-family: 'DM Mono', monospace;
+      line-height: 1.1;
+    }
+
+    .kpi-unit {
+      font-size: 11px;
+      color: #888;
+      margin-top: 2px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .kpi-sub {
+      font-size: 10px;
+      color: #aaa;
+      margin-top: 3px;
+    }
+
+    /* Panel cards */
+    .panel {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+
+    .panel h3 {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .panel .desc {
+      font-size: 11px;
+      color: #bbb;
+      margin-bottom: 14px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Charts row */
+    .chart-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .chart-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Feedstock strip */
+    .feedstrip {
+      background: #111;
+      color: #fff;
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .feedstrip .fs-item {}
+
+    .feedstrip .fs-label {
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .feedstrip .fs-val {
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* Heat badge */
+    .heat-badge-surplus {
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 8px 14px;
+    }
+
+    .heat-badge-deficit {
+      background: #fff0f0;
+      border: 1px solid #f5a0a0;
+      border-radius: 4px;
+      padding: 8px 14px;
+    }
+
+    /* Steam table display */
+    .steam-table-strip {
+      background: #f4f4f4;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .steam-table-strip .st-head {
+      font-weight: 600;
+      color: #111;
+      margin-bottom: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+    }
+
+    .steam-table-strip table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    .steam-table-strip td,
+    .steam-table-strip th {
+      padding: 2px 6px;
+      text-align: right;
+    }
+
+    .steam-table-strip th {
+      font-size: 10px;
+      color: #888;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .steam-table-strip tr.active-row td {
+      background: #111;
+      color: #fff;
+      border-radius: 2px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 3px;
+    }
+
+    /* Schematic */
+    .schematic-wrap {
+      overflow-x: auto;
+    }
+
+    svg text {
+      font-family: 'DM Sans', sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="dot"></div>
+        <div>
+          <div class="topbar h1" style="font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;">
+            MEG 315</div>
+          <div class="topbar sub">UNILAG · Applied Thermodynamics · AD-HTC Biorefinery · P<sub>boiler</sub> = 6.0 MPa
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#666;font-family:'DM Mono',monospace;text-align:right;">
+        Steam table: P = 6.0 MPa (60 bar)
+      </div>
+    </header>
+
+    <div class="body-wrap">
+
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+
+        <div class="section-label" style="margin-top:0">Feedstock</div>
+        <label>Biomass Type</label>
+        <select id="biomass_type"></select>
+        <div class="unit-row">
+          <div style="flex:1">
+            <label>Feed Rate — ṁ<sub>feed</sub></label>
+            <input id="feed_rate" type="number" value="10" min="0.5" step="0.5">
+          </div>
+          <span class="unit-tag">t/day</span>
+        </div>
+
+        <div class="section-label">Biogas ICE — Otto Cycle</div>
+        <div class="unit-row">
+          <div style="flex:1"><label>Ambient Temp — T₁</label><input id="t1" type="number" value="298" min="250"
+              max="320" step="1"></div>
+          <span class="unit-tag">K</span>
+        </div>
+        <div class="unit-row">
+          <div style="flex:1"><label>Compression Ratio — r</label><input id="r_p" type="number" value="10" min="4"
+              max="22" step="0.5"></div>
+          <span class="unit-tag">—</span>
+        </div>
+        <div class="unit-row">
+          <div style="flex:1"><label>Peak Temp — T₃</label><input id="tit" type="number" value="1200" min="800"
+              max="2000" step="10"></div>
+          <span class="unit-tag">K</span>
+        </div>
+        <div class="unit-row">
+          <div style="flex:1"><label>Air Mass Flow — ṁ<sub>air</sub></label><input id="mass_flow_air" type="number"
+              value="50" min="1" step="1"></div>
+          <span class="unit-tag">kg/s</span>
+        </div>
+
+        <div class="section-label">Rankine Cycle — P = 6.0 MPa (fixed)</div>
+        <div style="font-size:11px;color:#888;margin-bottom:8px;font-family:'DM Mono',monospace;">Boiler locked at 60
+          bar per steam table</div>
+        <div class="unit-row">
+          <div style="flex:1"><label>Steam Temp — T<sub>steam</sub></label><input id="t_steam" type="number" value="500"
+              min="300" max="700" step="10"></div>
+          <span class="unit-tag">°C</span>
+        </div>
+        <div class="unit-row">
+          <div style="flex:1"><label>Condenser Pressure</label><input id="p_cond" type="number" value="0.06" min="0.01"
+              max="1" step="0.01"></div>
+          <span class="unit-tag">bar</span>
+        </div>
+        <div class="unit-row">
+          <div style="flex:1"><label>Turbine Efficiency — η<sub>st</sub></label><input id="eta_st" type="number"
+              value="0.85" min="0.5" max="1.0" step="0.01"></div>
+          <span class="unit-tag">—</span>
+        </div>
+        <div class="unit-row">
+          <div style="flex:1"><label>Pump Efficiency — η<sub>p</sub></label><input id="eta_p" type="number" value="0.80"
+              min="0.5" max="1.0" step="0.01"></div>
+          <span class="unit-tag">—</span>
+        </div>
+
+        <div class="section-label">HTC Reactor</div>
+        <label>Operating Temp — T<sub>HTC</sub>: <strong id="htc_disp">220</strong>°C</label>
+        <input id="htc_temp_input" type="range" min="180" max="260" value="220" step="5" style="width:100%"
+          oninput="document.getElementById('htc_disp').textContent=this.value">
+        <div
+          style="display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-bottom:10px;font-family:'DM Mono',monospace;">
+          <span>180°C</span><span>220°C</span><span>260°C</span>
+        </div>
+
+        <button class="run-btn" onclick="runAnalysis()">▶ Run Analysis</button>
+
+        <div class="assumptions">
+          <strong>Fixed Assumptions</strong>
+          c<sub>p,air</sub>: 1.005 kJ/kg·K<br>
+          γ: 1.4 (air) | 1.33 (gas)<br>
+          R<sub>air</sub>: 0.287 kJ/kg·K<br>
+          VS destruction: 60%<br>
+          Biogas ρ: 1.2 kg/m³<br>
+          CH₄ LHV: 35.8 MJ/m³
+        </div>
+      </aside>
+
+      <!-- MAIN -->
+      <main>
+
+        <!-- Feedstock strip (hidden until run) -->
+        <div id="feedstrip" class="feedstrip" style="display:none">
+          <div class="fs-item">
+            <div class="fs-label">Feedstock</div>
+            <div class="fs-val" id="fs-name">—</div>
+          </div>
+          <div class="fs-item">
+            <div class="fs-label">Total Solids</div>
+            <div class="fs-val" id="fs-ts">—</div>
+          </div>
+          <div class="fs-item">
+            <div class="fs-label">Volatile Solids</div>
+            <div class="fs-val" id="fs-vs">—</div>
+          </div>
+          <div class="fs-item">
+            <div class="fs-label">Biogas Yield</div>
+            <div class="fs-val" id="fs-by">—</div>
+          </div>
+          <div class="fs-item">
+            <div class="fs-label">CH₄ Content</div>
+            <div class="fs-val" id="fs-ch4">—</div>
+          </div>
+          <div class="fs-item">
+            <div class="fs-label">HTC Yield</div>
+            <div class="fs-val" id="fs-htc">—</div>
+          </div>
+        </div>
+
+        <!-- KPI cards -->
+        <div id="kpi-grid" class="kpi-grid" style="display:none"></div>
+
+        <!-- Charts row 1: energy + mass -->
+        <div class="chart-row" id="charts1" style="display:none">
+          <div class="panel">
+            <h3>Energy Distribution</h3>
+            <div class="desc">Electrical · Thermal · Losses (kW)</div>
+            <canvas id="energyChart" height="240"></canvas>
+          </div>
+          <div class="panel">
+            <h3>Daily Mass Balance</h3>
+            <div class="desc">Feedstock → Biogas · Digestate · Hydrochar (kg/day)</div>
+            <canvas id="massChart" height="240"></canvas>
+          </div>
+        </div>
+
+        <!-- Charts row 2: h-s and T-s -->
+        <div class="chart-row" id="charts2" style="display:none">
+          <div class="panel">
+            <h3>h-s Mollier Diagram — Rankine Cycle</h3>
+            <div class="desc">P = 6.0 MPa · A: Pump In · B: Pump Out · C: Turbine In · D: Turbine Out</div>
+            <canvas id="hsChart" height="260"></canvas>
+            <!-- Live state table -->
+            <div id="rankine-states"
+              style="margin-top:12px;font-family:'DM Mono',monospace;font-size:11px;color:#444;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;">
+            </div>
+          </div>
+          <div class="panel">
+            <h3>T-s Diagram — Biogas ICE (Otto Cycle)</h3>
+            <div class="desc">1: Intake · 2: Compression · 3: Combustion · 4: Exhaust</div>
+            <canvas id="tsChart" height="260"></canvas>
+            <div id="otto-states"
+              style="margin-top:12px;font-family:'DM Mono',monospace;font-size:11px;color:#444;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Heat integration + schematic -->
+        <div class="chart-row" id="charts3" style="display:none">
+          <div class="panel">
+            <h3>Heat Integration Balance</h3>
+            <div class="desc">CHP Thermal Output vs. AD + HTC Demand (kW)</div>
+            <canvas id="heatChart" height="180"></canvas>
+            <div id="heat-summary" style="display:none;margin-top:12px;">
+              <div id="heat-badge" style="padding:10px 14px;border-radius:4px;">
+                <div id="heat-label"
+                  style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#888;"></div>
+                <div id="heat-value" style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:#111;">
+                </div>
+                <div
+                  style="display:flex;gap:18px;margin-top:8px;font-size:11px;font-family:'DM Mono',monospace;color:#666;">
+                  <span>Available: <strong id="h-avail" style="color:#111"></strong> kW</span>
+                  <span>AD need: <strong id="h-ad" style="color:#111"></strong> kW</span>
+                  <span>HTC need: <strong id="h-htc" style="color:#111"></strong> kW</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Active Steam State — P = 6.0 MPa Table</h3>
+            <div class="desc">Interpolated from uploaded table data</div>
+            <div class="steam-table-strip" id="steam-table-display">
+              <div class="st-head">P = 6.0 MPa (60 bar) — Superheated Steam</div>
+              <table id="steam-tbl">
+                <tr>
+                  <th>T (°C)</th>
+                  <th>v (m³/kg)</th>
+                  <th>u (kJ/kg)</th>
+                  <th>h (kJ/kg)</th>
+                  <th>s (kJ/kg·K)</th>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Process Schematic -->
+        <div class="panel" id="schematic-panel" style="display:none">
+          <h3>AD-HTC Process Schematic</h3>
+          <div class="desc">Material & energy flows — values update with each analysis run</div>
+          <div class="schematic-wrap">
+            <svg id="schematic" viewBox="0 0 900 340" style="width:100%;min-width:700px;height:auto;"></svg>
+          </div>
+        </div>
+
+      </main>
+    </div><!-- body-wrap -->
+  </div><!-- shell -->
+
+  <script>
+    // ═══════════════════════════════════════════════════
+    // BIOMASS DATABASE
+    // ═══════════════════════════════════════════════════
+    const BIOMASS_DB = {
+      cow_manure: { name: 'Cow Manure', TS: 0.18, VS: 0.80, biogasYield: 0.280, CH4: 0.60, HTC_yield: 0.48, HTC_HHV: 14500 },
+      food_waste: { name: 'Food / Kitchen Waste', TS: 0.25, VS: 0.90, biogasYield: 0.550, CH4: 0.62, HTC_yield: 0.45, HTC_HHV: 19800 },
+      sewage_sludge: { name: 'Sewage Sludge', TS: 0.30, VS: 0.70, biogasYield: 0.300, CH4: 0.58, HTC_yield: 0.50, HTC_HHV: 15000 },
+      corn_stover: { name: 'Corn Stover', TS: 0.88, VS: 0.85, biogasYield: 0.338, CH4: 0.55, HTC_yield: 0.55, HTC_HHV: 21500 },
+      rice_husk: { name: 'Rice Husk', TS: 0.90, VS: 0.80, biogasYield: 0.250, CH4: 0.52, HTC_yield: 0.58, HTC_HHV: 18200 },
+      sugarcane: { name: 'Sugarcane Bagasse', TS: 0.50, VS: 0.90, biogasYield: 0.310, CH4: 0.54, HTC_yield: 0.52, HTC_HHV: 20100 },
+      pig_manure: { name: 'Pig Manure', TS: 0.20, VS: 0.82, biogasYield: 0.320, CH4: 0.62, HTC_yield: 0.46, HTC_HHV: 15200 },
+      wood_chips: { name: 'Wood Chips', TS: 0.85, VS: 0.92, biogasYield: 0.200, CH4: 0.55, HTC_yield: 0.65, HTC_HHV: 24000 },
+      msw: { name: 'Municipal Solid Waste', TS: 0.60, VS: 0.75, biogasYield: 0.400, CH4: 0.58, HTC_yield: 0.50, HTC_HHV: 17500 },
+      algae: { name: 'Microalgae', TS: 0.10, VS: 0.85, biogasYield: 0.450, CH4: 0.65, HTC_yield: 0.40, HTC_HHV: 22000 },
+      cassava: { name: 'Cassava Peel', TS: 0.88, VS: 0.86, biogasYield: 0.420, CH4: 0.58, HTC_yield: 0.48, HTC_HHV: 19200 },
+      palm_waste: { name: 'Palm Empty Fruit Bunch', TS: 0.78, VS: 0.85, biogasYield: 0.270, CH4: 0.53, HTC_yield: 0.60, HTC_HHV: 20800 },
+    };
+
+    const sel = document.getElementById('biomass_type');
+    Object.entries(BIOMASS_DB).forEach(([k, v]) => {
+      const o = document.createElement('option'); o.value = k; o.textContent = v.name; sel.appendChild(o);
+    });
+
+    // ═══════════════════════════════════════════════════
+    // STEAM TABLE AT P = 6.0 MPa (60 bar)
+    // Columns: T(°C), v(m³/kg), u(kJ/kg), h(kJ/kg), s(kJ/kg·K)
+    // Source: Uploaded table image
+    // ═══════════════════════════════════════════════════
+    const STEAM_60BAR = [
+      // T_C,   v,       u,      h,      s
+      { T: 275.59, v: 0.03245, u: 2589.9, h: 2784.6, s: 5.8902, label: 'Sat.' },
+      { T: 300, v: 0.03619, u: 2668.4, h: 2885.6, s: 6.0703 },
+      { T: 350, v: 0.04225, u: 2790.4, h: 3043.9, s: 6.3357 },
+      { T: 400, v: 0.04742, u: 2893.7, h: 3178.3, s: 6.5432 },
+      { T: 450, v: 0.05217, u: 2989.9, h: 3302.9, s: 6.7219 },
+      { T: 500, v: 0.05667, u: 3083.1, h: 3423.1, s: 6.8826 },
+      { T: 550, v: 0.06102, u: 3175.2, h: 3541.3, s: 7.0308 },
+      { T: 600, v: 0.06527, u: 3267.2, h: 3658.8, s: 7.1693 },
+      { T: 700, v: 0.07355, u: 3453.0, h: 3894.3, s: 7.4247 },
+      { T: 800, v: 0.08165, u: 3643.2, h: 4133.1, s: 7.6582 },
+    ];
+
+    // Interpolate h and s at P=60 bar for given T_C
+    function lookupSuperheated60(T_C) {
+      const tbl = STEAM_60BAR;
+      const Tc = Math.max(tbl[0].T, Math.min(tbl[tbl.length - 1].T, T_C));
+      for (let i = 0; i < tbl.length - 1; i++) {
+        if (Tc >= tbl[i].T && Tc <= tbl[i + 1].T) {
+          const f = (Tc - tbl[i].T) / (tbl[i + 1].T - tbl[i].T);
+          return {
+            h: tbl[i].h + f * (tbl[i + 1].h - tbl[i].h),
+            s: tbl[i].s + f * (tbl[i + 1].s - tbl[i].s),
+            v: tbl[i].v + f * (tbl[i + 1].v - tbl[i].v),
+            u: tbl[i].u + f * (tbl[i + 1].u - tbl[i].u),
+          };
+        }
+      }
+      return { h: tbl[tbl.length - 1].h, s: tbl[tbl.length - 1].s, v: tbl[tbl.length - 1].v, u: tbl[tbl.length - 1].u };
+    }
+
+    // Saturated water table for condenser (low pressure side)
+    const SAT_TABLE = [
+      { p: 0.01, t: 45.8, hf: 191.8, hg: 2584.7, sf: 0.649, sg: 8.150 },
+      { p: 0.02, t: 60.1, hf: 251.4, hg: 2609.7, sf: 0.832, sg: 7.909 },
+      { p: 0.04, t: 75.9, hf: 317.6, hg: 2636.8, sf: 1.026, sg: 7.670 },
+      { p: 0.06, t: 85.9, hf: 359.9, hg: 2653.6, sf: 1.145, sg: 7.533 },
+      { p: 0.08, t: 93.5, hf: 391.7, hg: 2665.3, sf: 1.233, sg: 7.435 },
+      { p: 0.10, t: 99.6, hf: 417.4, hg: 2675.5, sf: 1.303, sg: 7.359 },
+      { p: 0.20, t: 120.2, hf: 504.7, hg: 2706.7, sf: 1.530, sg: 7.127 },
+      { p: 0.50, t: 151.9, hf: 640.2, hg: 2748.7, sf: 1.861, sg: 6.821 },
+      { p: 1.00, t: 179.9, hf: 762.8, hg: 2778.1, sf: 2.139, sg: 6.586 },
+    ];
+
+    function satLookup(p_bar) {
+      const tb = SAT_TABLE;
+      if (p_bar <= tb[0].p) return { ...tb[0] };
+      if (p_bar >= tb[tb.length - 1].p) return { ...tb[tb.length - 1] };
+      for (let i = 0; i < tb.length - 1; i++) {
+        if (p_bar >= tb[i].p && p_bar <= tb[i + 1].p) {
+          const f = (p_bar - tb[i].p) / (tb[i + 1].p - tb[i].p);
+          const L = (a, b) => a + f * (b - a);
+          return { t: L(tb[i].t, tb[i + 1].t), hf: L(tb[i].hf, tb[i + 1].hf), hg: L(tb[i].hg, tb[i + 1].hg), sf: L(tb[i].sf, tb[i + 1].sf), sg: L(tb[i].sg, tb[i + 1].sg) };
+        }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // CHART INSTANCES
+    // ═══════════════════════════════════════════════════
+    let charts = {};
+
+    function destroyCharts() {
+      Object.values(charts).forEach(c => c && c.destroy());
+      charts = {};
+    }
+
+    // ═══════════════════════════════════════════════════
+    // MAIN ANALYSIS ENGINE
+    // ═══════════════════════════════════════════════════
+    function runAnalysis() {
+      const key = document.getElementById('biomass_type').value;
+      const bm = BIOMASS_DB[key];
+      const feedRate = parseFloat(document.getElementById('feed_rate').value);   // t/day
+      const T1 = parseFloat(document.getElementById('t1').value);           // K
+      const r = parseFloat(document.getElementById('r_p').value);          // compression ratio
+      const T3 = parseFloat(document.getElementById('tit').value);          // K peak
+      const m_air = parseFloat(document.getElementById('mass_flow_air').value);// kg/s
+      const t_steam_C = parseFloat(document.getElementById('t_steam').value);      // °C
+      const p_cond = parseFloat(document.getElementById('p_cond').value);       // bar
+      const eta_st = parseFloat(document.getElementById('eta_st').value);
+      const eta_p = parseFloat(document.getElementById('eta_p').value);
+      const htcTemp = parseFloat(document.getElementById('htc_temp_input').value);
+
+      // ── BIOMASS MASS BALANCE ────────────────────────
+      const feedKg = feedRate * 1000;              // kg/day
+      const vsMass = feedKg * bm.TS * bm.VS;
+      const biogasVol = vsMass * bm.biogasYield;      // m³/day
+      const methaneVol = biogasVol * bm.CH4;
+      const LHV_biogas = methaneVol * 35.8 / 1000;    // GJ/day → kW later
+      const biogasMass = biogasVol * 1.2;
+      const digestateDry = vsMass * (1 - 0.60);
+      const digestateWet = feedKg - biogasMass;
+      const hydrocharKg = digestateDry * bm.HTC_yield;
+
+      // ── OTTO CYCLE (Biogas ICE) ──────────────────────
+      const cp_air = 1.005, cp_gas = 1.148, g = 1.4, R_air = 0.287;
+      const T2 = T1 * Math.pow(r, g - 1);              // isentropic compression
+      const T4 = T3 / Math.pow(r, g - 1);              // isentropic expansion
+      const W_comp = cp_air * (T2 - T1);               // kJ/kg
+      const W_turb = cp_gas * (T3 - T4);               // kJ/kg
+      const W_net = W_turb - W_comp;                  // kJ/kg
+      const Q_in = cp_gas * (T3 - T2);               // kJ/kg
+      const eta_otto = W_net / Q_in;
+      const elecPower = m_air * W_net;                  // kW
+      const thermPower = m_air * cp_gas * (T4 - T1) * 0.45; // kW recoverable heat
+
+      // Otto T-s states (s1 = 1.0 ref)
+      const s1 = 1.0;
+      const s2 = s1; // isentropic compression → same entropy
+      const s3 = s2 + cp_gas * Math.log(T3 / T2);
+      const s4 = s3; // isentropic expansion → same entropy
+
+      // ── RANKINE CYCLE — P = 6.0 MPa (60 bar) FIXED ──
+      // State A: Condenser exit (sat liquid at p_cond)
+      const sat = satLookup(p_cond);
+      const hA = sat.hf, sA = sat.sf;
+      const hfg = sat.hg - sat.hf;
+      const sfg = sat.sg - sat.sf;
+
+      // State B: Pump outlet (≈ isentropic)
+      const p_boiler = 60; // bar — FIXED at 6.0 MPa
+      const v_f = 0.001;
+      const w_pump = v_f * (p_boiler - p_cond) * 100;   // kJ/kg
+      const hB = hA + w_pump / eta_p;
+      const sB = sA;
+
+      // State C: Turbine inlet — from P=6.0 MPa table
+      const stm = lookupSuperheated60(t_steam_C);
+      const hC = stm.h, sC = stm.s;
+
+      // State D: Turbine exit
+      const x_s = Math.min(1.0, (sC - sat.sf) / sfg);
+      const hDs = sat.hf + x_s * hfg;
+      const hD = hC - eta_st * (hC - hDs);
+      const x_act = Math.min(1.0, (hD - sat.hf) / hfg);
+      const sD = sat.sf + x_act * sfg;
+
+      const w_net_rank = (hC - hD) - w_pump / eta_p;
+      const q_boiler = hC - hB;
+      const eta_rank = w_net_rank / q_boiler;
+
+      // ── HEAT INTEGRATION ────────────────────────────
+      const T_AD = 37;
+      const Q_AD_kW = (feedKg / 86400) * 4180 * (T_AD - (T1 - 273.15)) / 1000;
+      const Q_HTC_kW = (digestateWet / 86400) * 4000 * (htcTemp - T_AD) / 1000;
+      const heatBalance = thermPower - Q_AD_kW - Q_HTC_kW;
+
+      // ── OLR ─────────────────────────────────────────
+      const HRT = 25;
+      const V_reactor = (feedKg / 1000) * HRT;
+      const OLR = vsMass / V_reactor;
+
+      // ═══════════════════════════════════════════════
+      // UPDATE UI
+      // ═══════════════════════════════════════════════
+      document.getElementById('feedstrip').style.display = 'flex';
+      document.getElementById('fs-name').textContent = bm.name;
+      document.getElementById('fs-ts').textContent = (bm.TS * 100).toFixed(0) + '% TS';
+      document.getElementById('fs-vs').textContent = (bm.VS * 100).toFixed(0) + '% VS';
+      document.getElementById('fs-by').textContent = bm.biogasYield + ' m³/kg VS';
+      document.getElementById('fs-ch4').textContent = (bm.CH4 * 100).toFixed(0) + '% CH₄';
+      document.getElementById('fs-htc').textContent = (bm.HTC_yield * 100).toFixed(0) + '%';
+
+      // KPI cards
+      const kpiGrid = document.getElementById('kpi-grid');
+      kpiGrid.style.display = 'grid';
+      const kpis = [
+        { label: 'Biogas Volume', val: biogasVol.toFixed(0), unit: 'm³/day', sub: 'AD output' },
+        { label: 'Electricity', val: elecPower.toFixed(1), unit: 'kW', sub: 'ICE net power' },
+        { label: 'Thermal Output', val: thermPower.toFixed(1), unit: 'kW', sub: '45% recovery' },
+        { label: 'Hydrochar', val: hydrocharKg.toFixed(0), unit: 'kg/day', sub: 'HHV: ' + bm.HTC_HHV + ' kJ/kg' },
+        { label: 'Otto η', val: (eta_otto * 100).toFixed(1), unit: '%', sub: 'ICE thermal eff.' },
+        { label: 'Rankine η', val: (eta_rank * 100).toFixed(1), unit: '%', sub: 'P=6.0 MPa cycle' },
+        { label: 'T₂ Comp. Out', val: T2.toFixed(1), unit: 'K', sub: 'After compression' },
+        { label: 'T₄ Exhaust', val: T4.toFixed(1), unit: 'K', sub: 'After expansion' },
+        { label: 'h_C Turbine In', val: hC.toFixed(1), unit: 'kJ/kg', sub: 's_C = ' + sC.toFixed(4) + ' kJ/kg·K' },
+        { label: 'h_D Turbine Out', val: hD.toFixed(1), unit: 'kJ/kg', sub: 'x = ' + x_act.toFixed(3) },
+        { label: 'w_net Rankine', val: w_net_rank.toFixed(1), unit: 'kJ/kg', sub: 'Per kg steam' },
+        { label: 'OLR', val: OLR.toFixed(2), unit: 'kg VS/m³·d', sub: 'Organic Loading Rate' },
+      ];
+      kpiGrid.innerHTML = kpis.map(k => `
+    <div class="kpi-card">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.val}</div>
+      <div class="kpi-unit">${k.unit}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+
+      // Show panel sections
+      ['charts1', 'charts2', 'charts3', 'schematic-panel'].forEach(id => {
+        document.getElementById(id).style.display = 'grid';
+      });
+      document.getElementById('schematic-panel').style.display = 'block';
+
+      // Heat badge
+      document.getElementById('heat-summary').style.display = 'block';
+      const badge = document.getElementById('heat-badge');
+      badge.className = heatBalance >= 0 ? 'heat-badge-surplus' : 'heat-badge-deficit';
+      document.getElementById('heat-label').textContent = heatBalance >= 0 ? 'HEAT SURPLUS' : 'HEAT DEFICIT';
+      document.getElementById('heat-value').textContent = (heatBalance >= 0 ? '+' : '') + heatBalance.toFixed(1) + ' kW';
+      document.getElementById('h-avail').textContent = thermPower.toFixed(1);
+      document.getElementById('h-ad').textContent = Q_AD_kW.toFixed(1);
+      document.getElementById('h-htc').textContent = Q_HTC_kW.toFixed(1);
+
+      // Rankine state table
+      document.getElementById('rankine-states').innerHTML = [
+        { pt: 'A', desc: 'Pump In', h: hA.toFixed(1), s: sA.toFixed(4) },
+        { pt: 'B', desc: 'Pump Out', h: hB.toFixed(1), s: sB.toFixed(4) },
+        { pt: 'C', desc: 'Turbine In', h: hC.toFixed(1), s: sC.toFixed(4) },
+        { pt: 'D', desc: 'Turbine Out', h: hD.toFixed(1), s: sD.toFixed(4) },
+      ].map(st => `<div style="background:#f8f8f8;border:1px solid #e0e0e0;border-radius:4px;padding:8px 4px;">
+      <div style="font-weight:700;font-size:13px;color:#111">${st.pt}</div>
+      <div style="font-size:10px;color:#888">${st.desc}</div>
+      <div style="font-size:12px;color:#111">h=${st.h}</div>
+      <div style="font-size:11px;color:#666">s=${st.s}</div>
+    </div>`).join('');
+
+      // Otto state table
+      document.getElementById('otto-states').innerHTML = [
+        { pt: '1', desc: 'Intake', T: T1.toFixed(1), s: s1.toFixed(3) },
+        { pt: '2', desc: 'Compress', T: T2.toFixed(1), s: s2.toFixed(3) },
+        { pt: '3', desc: 'Combust', T: T3.toFixed(1), s: s3.toFixed(3) },
+        { pt: '4', desc: 'Exhaust', T: T4.toFixed(1), s: s4.toFixed(3) },
+      ].map(st => `<div style="background:#f8f8f8;border:1px solid #e0e0e0;border-radius:4px;padding:8px 4px;">
+      <div style="font-weight:700;font-size:13px;color:#111">${st.pt}</div>
+      <div style="font-size:10px;color:#888">${st.desc}</div>
+      <div style="font-size:12px;color:#111">T=${st.T} K</div>
+      <div style="font-size:11px;color:#666">s=${st.s}</div>
+    </div>`).join('');
+
+      // Steam table display — highlight active row
+      buildSteamTable(t_steam_C);
+
+      // Draw charts
+      destroyCharts();
+      drawCharts(
+        { elec: elecPower, therm: thermPower, losses: m_air * Q_in - elecPower - thermPower },
+        { feedKg, biogasMass, digestateDry, hydrocharKg },
+        { thermPower, Q_AD_kW, Q_HTC_kW },
+        { hA, sA, hB, sB, hC, sC, hD, sD },
+        { T1, T2, T3, T4, s1, s2, s3, s4 }
+      );
+
+      // Draw schematic
+      drawSchematic({ feedKg, biogasVol, methaneVol, elecPower, thermPower, digestateWet, digestateDry, hydrocharKg, htcTemp });
+    }
+
+    // ═══════════════════════════════════════════════════
+    // STEAM TABLE DISPLAY
+    // ═══════════════════════════════════════════════════
+    function buildSteamTable(activeT) {
+      const tbl = document.getElementById('steam-tbl');
+      // Remove old body rows
+      while (tbl.rows.length > 1) tbl.deleteRow(1);
+      STEAM_60BAR.forEach(row => {
+        const tr = tbl.insertRow();
+        const isActive = Math.abs(row.T - activeT) < 30 || (row.label === 'Sat.' && activeT < 300);
+        if (Math.abs(row.T - activeT) < 30) tr.className = 'active-row';
+        [row.label || row.T, row.v.toFixed(5), row.u.toFixed(1), row.h.toFixed(1), row.s.toFixed(4)].forEach(val => {
+          const td = tr.insertCell(); td.textContent = val;
+        });
+      });
+    }
+
+    // ═══════════════════════════════════════════════════
+    // CHARTS
+    // ═══════════════════════════════════════════════════
+    const GRID_C = '#e8e8e8';
+    const TICK_C = '#555';
+    const FONT = { family: 'DM Sans', size: 11 };
+
+    function drawCharts(energy, mass, heat, rankine, otto) {
+
+      // Energy chart
+      charts.energy = new Chart(document.getElementById('energyChart'), {
+        type: 'bar',
+        data: {
+          labels: ['Electrical', 'Thermal', 'Losses'],
+          datasets: [{
+            data: [energy.elec, energy.therm, energy.losses],
+            backgroundColor: ['#111', '#666', '#ccc'], borderRadius: 3
+          }]
+        },
+        options: {
+          responsive: true, plugins: {
+            legend: { display: false },
+            datalabels: {
+              color: '#fff', font: { family: 'DM Mono', size: 10, weight: 'bold' },
+              formatter: v => v.toFixed(0) + ' kW'
+            }
+          },
+          scales: { x: { grid: { color: GRID_C }, ticks: { color: TICK_C, font: FONT } }, y: { grid: { color: GRID_C }, ticks: { color: TICK_C, font: FONT } } }
+        }
+      });
+
+      // Mass chart
+      charts.mass = new Chart(document.getElementById('massChart'), {
+        type: 'bar',
+        data: {
+          labels: ['Feed', 'Biogas', 'Digestate\n(dry)', 'Hydrochar'],
+          datasets: [{
+            data: [mass.feedKg, mass.biogasMass, mass.digestateDry, mass.hydrocharKg],
+            backgroundColor: ['#111', '#444', '#888', '#bbb'], borderRadius: 3
+          }]
+        },
+        options: {
+          responsive: true, indexAxis: 'y',
+          plugins: {
+            legend: { display: false },
+            datalabels: { color: '#fff', font: { family: 'DM Mono', size: 10, weight: 'bold' }, formatter: v => v.toFixed(0) + ' kg' }
+          },
+          scales: { x: { grid: { color: GRID_C }, ticks: { color: TICK_C, font: FONT } }, y: { grid: { display: false }, ticks: { color: TICK_C, font: FONT } } }
+        }
+      });
+
+      // Heat chart
+      charts.heat = new Chart(document.getElementById('heatChart'), {
+        type: 'bar',
+        data: {
+          labels: ['CHP Output', 'AD Demand', 'HTC Demand'],
+          datasets: [{
+            data: [heat.thermPower, heat.Q_AD_kW, heat.Q_HTC_kW],
+            backgroundColor: ['#111', '#666', '#999'], borderRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            datalabels: { color: '#fff', font: { family: 'DM Mono', size: 10, weight: 'bold' }, formatter: v => v.toFixed(1) + ' kW' }
+          },
+          scales: { x: { grid: { color: GRID_C }, ticks: { color: TICK_C, font: FONT } }, y: { grid: { color: GRID_C }, ticks: { color: TICK_C, font: FONT } } }
+        }
+      });
+
+      // h-s Mollier
+      const r = rankine;
+      charts.hs = new Chart(document.getElementById('hsChart'), {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'Rankine Cycle',
+            data: [{ x: r.sA, y: r.hA }, { x: r.sB, y: r.hB }, { x: r.sC, y: r.hC }, { x: r.sD, y: r.hD }, { x: r.sA, y: r.hA }],
+            pointLabels: ['A', 'B', 'C', 'D', ''],
+            borderColor: '#111', backgroundColor: 'rgba(0,0,0,0.05)',
+            pointBackgroundColor: ['#111', '#111', '#111', '#111', 'transparent'],
+            pointRadius: [6, 6, 6, 6, 0], showLine: true, tension: 0.15, fill: true
+          }]
+        },
+        options: {
+          responsive: true, animation: { duration: 600 },
+          scales: {
+            x: { title: { display: true, text: 'Entropy s (kJ/kg·K)', color: TICK_C, font: FONT }, grid: { color: GRID_C }, ticks: { color: TICK_C, font: { family: 'DM Mono', size: 10 } } },
+            y: { title: { display: true, text: 'Enthalpy h (kJ/kg)', color: TICK_C, font: FONT }, grid: { color: GRID_C }, ticks: { color: TICK_C, font: { family: 'DM Mono', size: 10 } } }
+          },
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              display: true, color: '#111', font: { family: 'DM Mono', size: 10, weight: 'bold' },
+              anchor: 'end', align: 'top', offset: 4, formatter: (_, ctx) => ctx.dataset.pointLabels[ctx.dataIndex] || ''
+            }
+          }
+        }
+      });
+
+      // T-s Otto
+      const b = otto;
+      charts.ts = new Chart(document.getElementById('tsChart'), {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'Otto Cycle',
+            data: [{ x: b.s1, y: b.T1 }, { x: b.s2, y: b.T2 }, { x: b.s3, y: b.T3 }, { x: b.s4, y: b.T4 }, { x: b.s1, y: b.T1 }],
+            pointLabels: ['1', '2', '3', '4', ''],
+            borderColor: '#111', backgroundColor: 'rgba(0,0,0,0.05)',
+            pointBackgroundColor: ['#111', '#111', '#111', '#111', 'transparent'],
+            pointRadius: [6, 6, 6, 6, 0], showLine: true, tension: 0.15, fill: true
+          }]
+        },
+        options: {
+          responsive: true, animation: { duration: 600 },
+          scales: {
+            x: { title: { display: true, text: 'Entropy s (kJ/kg·K)', color: TICK_C, font: FONT }, grid: { color: GRID_C }, ticks: { color: TICK_C, font: { family: 'DM Mono', size: 10 } } },
+            y: { title: { display: true, text: 'Temperature T (K)', color: TICK_C, font: FONT }, grid: { color: GRID_C }, ticks: { color: TICK_C, font: { family: 'DM Mono', size: 10 } } }
+          },
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              display: true, color: '#111', font: { family: 'DM Mono', size: 10, weight: 'bold' },
+              anchor: 'end', align: 'top', offset: 4, formatter: (_, ctx) => ctx.dataset.pointLabels[ctx.dataIndex] || ''
+            }
+          }
+        }
+      });
+    }
+
+    // ═══════════════════════════════════════════════════
+    // PROCESS SCHEMATIC — clean B&W
+    // ═══════════════════════════════════════════════════
+    function drawSchematic({ feedKg, biogasVol, methaneVol, elecPower, thermPower, digestateWet, digestateDry, hydrocharKg, htcTemp }) {
+      const svg = document.getElementById('schematic');
+
+      const BOX_W = 100, BOX_H = 50;
+      const stroke = '#111';
+      const fill_box = '#fff';
+      const fill_dark = '#111';
+
+      // Helper: rectangle box with label
+      function box(x, y, label, sub = '', dark = false) {
+        return `
+      <rect x="${x}" y="${y}" width="${BOX_W}" height="${BOX_H}" rx="3"
+        fill="${dark ? fill_dark : fill_box}" stroke="${stroke}" stroke-width="1.5"/>
+      <text x="${x + BOX_W / 2}" y="${y + 20}" text-anchor="middle" font-size="12" font-weight="700"
+        fill="${dark ? '#fff' : '#111'}" font-family="DM Sans">${label}</text>
+      <text x="${x + BOX_W / 2}" y="${y + 35}" text-anchor="middle" font-size="9.5"
+        fill="${dark ? '#ccc' : '#666'}" font-family="DM Mono">${sub}</text>`;
+      }
+
+      // Arrow
+      function arrow(x1, y1, x2, y2, label = '') {
+        return `
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="1.5" marker-end="url(#arr)"/>
+      ${label ? `<text x="${(x1 + x2) / 2}" y="${(y1 + y2) / 2 - 5}" text-anchor="middle" font-size="9" fill="#666" font-family="DM Mono">${label}</text>` : ''}`;
+      }
+
+      // Arrow going down
+      function arrowD(x, y1, y2, label = '') { return arrow(x, y1, x, y2, label); }
+      function arrowR(y, x1, x2, label = '') { return arrow(x1, y, x2, y, label); }
+
+      const html = `
+    <defs>
+      <marker id="arr" markerWidth="8" markerHeight="6" refX="6" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#111"/>
+      </marker>
+    </defs>
+
+    <!-- Row 1: Feed → Mixer → AD → CHP -->
+    ${box(20, 30, 'FEEDSTOCK', feedKg.toFixed(0) + ' kg/d', true)}
+    ${arrowR(55, 120, 150, '')}
+    ${box(150, 30, 'MIXER', 'MXR1', false)}
+    ${arrowR(55, 250, 290, '')}
+    ${box(290, 30, 'AD', biogasVol.toFixed(0) + ' m³/d', false)}
+    ${arrowR(55, 390, 430, biogasVol.toFixed(0) + ' m³/d')}
+    ${box(430, 30, 'CHP', 'Biogas ICE', false)}
+
+    <!-- CHP outputs: electricity (up) + heat (right) -->
+    ${arrowD(480, 30, 5)}
+    <text x="480" y="0" text-anchor="middle" font-size="10" fill="#111" font-family="DM Mono" font-weight="600">⚡ ${elecPower.toFixed(0)} kW</text>
+    ${arrowR(55, 530, 600, thermPower.toFixed(0) + ' kW')}
+    <text x="650" y="60" font-size="10" fill="#111" font-family="DM Mono" font-weight="600">🔥 Heat</text>
+
+    <!-- AD → Digestate → Filter Press -->
+    ${arrowD(340, 80, 150, '')}
+    ${box(290, 150, 'FILTER\nPRESS', digestateWet.toFixed(0) + ' kg/d', false)}
+
+    <!-- Filter press outputs: solid (down to HTC) + liquid (left back to mixer) -->
+    ${arrowD(340, 200, 240, digestateDry.toFixed(0) + ' kg/d')}
+    ${box(290, 240, 'HTC', htcTemp + '°C', false)}
+    ${arrowD(340, 290, 340, '')}
+    ${box(290, 340, 'DRYER', '', false)}
+
+    <!-- Liquid recycle back to mixer -->
+    ${arrow(290, 175, 200, 175, 'liquid recycle')}
+    ${arrowD(200, 175, 80)}
+    ${arrow(200, 80, 250, 55, '')}
+
+    <!-- Hydrochar output -->
+    ${arrowR(365, 390, 450, hydrocharKg.toFixed(0) + ' kg/d')}
+    <text x="455" y="370" font-size="10" fill="#111" font-family="DM Mono" font-weight="600">Hydrochar</text>
+
+    <!-- Digestate direct to demand -->
+    ${arrowR(175, 390, 460, 'digestate')}
+    <text x="465" y="180" font-size="10" fill="#111" font-family="DM Mono">→ demand</text>
+  `;
+
+      svg.innerHTML = html;
+    }
+
+    // Run on load
+    window.addEventListener('load', () => runAnalysis());
+
+    // ═══════════════════════════════════════════════════
+    // API INTEGRATION LAYER
+    // When served from FastAPI, calculations go through
+    // the backend API and results are stored in SQLite.
+    // When opened as a static file, original local
+    // logic above is used as-is.
+    // ═══════════════════════════════════════════════════
+    const IS_API_MODE = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+
+    if (IS_API_MODE) {
+      // Load feedstocks from database via API
+      fetch('/api/feedstocks')
+        .then(r => r.json())
+        .then(feedstocks => {
+          const sel = document.getElementById('biomass_type');
+          // Clear existing options and repopulate from DB
+          sel.innerHTML = '';
+          feedstocks.forEach(f => {
+            const o = document.createElement('option');
+            o.value = f.key;
+            o.textContent = f.name;
+            sel.appendChild(o);
+          });
+          console.log(`✓ Loaded ${feedstocks.length} feedstocks from database`);
+        })
+        .catch(err => console.warn('API feedstock load failed, using local data:', err));
+
+      // Override runAnalysis to call the API
+      const _localRunAnalysis = runAnalysis;
+
+      runAnalysis = async function () {
+        const payload = {
+          feedstock_key: document.getElementById('biomass_type').value,
+          feed_rate: parseFloat(document.getElementById('feed_rate').value),
+          T1: parseFloat(document.getElementById('t1').value),
+          compression_ratio: parseFloat(document.getElementById('r_p').value),
+          T3: parseFloat(document.getElementById('tit').value),
+          mass_flow_air: parseFloat(document.getElementById('mass_flow_air').value),
+          t_steam_C: parseFloat(document.getElementById('t_steam').value),
+          p_cond: parseFloat(document.getElementById('p_cond').value),
+          eta_turbine: parseFloat(document.getElementById('eta_st').value),
+          eta_pump: parseFloat(document.getElementById('eta_p').value),
+          htc_temp: parseFloat(document.getElementById('htc_temp_input').value),
+        };
+
+        try {
+          const resp = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          if (!resp.ok) throw new Error(`API error: ${resp.status}`);
+
+          const R = await resp.json();
+          console.log('✓ API analysis complete — result stored in database');
+
+          // Map API result back to the UI update logic
+          const bm = R.feedstock;
+          const o = R.otto;
+          const rk = R.rankine;
+          const mb = R.mass_balance;
+          const ht = R.heat;
+
+          // Show feedstock strip
+          document.getElementById('feedstrip').style.display = 'flex';
+          document.getElementById('fs-name').textContent = bm.name;
+          document.getElementById('fs-ts').textContent = (bm.ts * 100).toFixed(0) + '% TS';
+          document.getElementById('fs-vs').textContent = (bm.vs * 100).toFixed(0) + '% VS';
+          document.getElementById('fs-by').textContent = bm.biogas_yield + ' m³/kg VS';
+          document.getElementById('fs-ch4').textContent = (bm.ch4 * 100).toFixed(0) + '% CH₄';
+          document.getElementById('fs-htc').textContent = (bm.htc_yield * 100).toFixed(0) + '%';
+
+          // KPI cards
+          const kpiGrid = document.getElementById('kpi-grid');
+          kpiGrid.style.display = 'grid';
+          const kpis = [
+            { label: 'Biogas Volume', val: mb.biogas_vol.toFixed(0), unit: 'm³/day', sub: 'AD output' },
+            { label: 'Electricity', val: o.elec_power_kW.toFixed(1), unit: 'kW', sub: 'ICE net power' },
+            { label: 'Thermal Output', val: o.therm_power_kW.toFixed(1), unit: 'kW', sub: '45% recovery' },
+            { label: 'Hydrochar', val: mb.hydrochar_kg.toFixed(0), unit: 'kg/day', sub: 'HHV: ' + bm.htc_hhv + ' kJ/kg' },
+            { label: 'Otto η', val: (o.efficiency * 100).toFixed(1), unit: '%', sub: 'ICE thermal eff.' },
+            { label: 'Rankine η', val: (rk.efficiency * 100).toFixed(1), unit: '%', sub: 'P=6.0 MPa cycle' },
+            { label: 'T₂ Comp. Out', val: o.T2.toFixed(1), unit: 'K', sub: 'After compression' },
+            { label: 'T₄ Exhaust', val: o.T4.toFixed(1), unit: 'K', sub: 'After expansion' },
+            { label: 'h_C Turbine In', val: rk.hC.toFixed(1), unit: 'kJ/kg', sub: 's_C = ' + rk.sC.toFixed(4) + ' kJ/kg·K' },
+            { label: 'h_D Turbine Out', val: rk.hD.toFixed(1), unit: 'kJ/kg', sub: 'x = ' + rk.x_actual.toFixed(3) },
+            { label: 'w_net Rankine', val: rk.w_net.toFixed(1), unit: 'kJ/kg', sub: 'Per kg steam' },
+            { label: 'OLR', val: R.olr.toFixed(2), unit: 'kg VS/m³·d', sub: 'Organic Loading Rate' },
+          ];
+          kpiGrid.innerHTML = kpis.map(k => `
+        <div class="kpi-card">
+          <div class="kpi-label">${k.label}</div>
+          <div class="kpi-value">${k.val}</div>
+          <div class="kpi-unit">${k.unit}</div>
+          <div class="kpi-sub">${k.sub}</div>
+        </div>`).join('');
+
+          // Show panels
+          ['charts1', 'charts2', 'charts3', 'schematic-panel'].forEach(id => {
+            document.getElementById(id).style.display = 'grid';
+          });
+          document.getElementById('schematic-panel').style.display = 'block';
+
+          // Heat badge
+          document.getElementById('heat-summary').style.display = 'block';
+          const badge = document.getElementById('heat-badge');
+          badge.className = ht.heat_balance_kW >= 0 ? 'heat-badge-surplus' : 'heat-badge-deficit';
+          document.getElementById('heat-label').textContent = ht.status === 'SURPLUS' ? 'HEAT SURPLUS' : 'HEAT DEFICIT';
+          document.getElementById('heat-value').textContent = (ht.heat_balance_kW >= 0 ? '+' : '') + ht.heat_balance_kW.toFixed(1) + ' kW';
+          document.getElementById('h-avail').textContent = ht.therm_power_kW.toFixed(1);
+          document.getElementById('h-ad').textContent = ht.Q_AD_kW.toFixed(1);
+          document.getElementById('h-htc').textContent = ht.Q_HTC_kW.toFixed(1);
+
+          // State tables
+          document.getElementById('rankine-states').innerHTML = [
+            { pt: 'A', desc: 'Pump In', h: rk.hA.toFixed(1), s: rk.sA.toFixed(4) },
+            { pt: 'B', desc: 'Pump Out', h: rk.hB.toFixed(1), s: rk.sB.toFixed(4) },
+            { pt: 'C', desc: 'Turbine In', h: rk.hC.toFixed(1), s: rk.sC.toFixed(4) },
+            { pt: 'D', desc: 'Turbine Out', h: rk.hD.toFixed(1), s: rk.sD.toFixed(4) },
+          ].map(st => `<div style="background:#f8f8f8;border:1px solid #e0e0e0;border-radius:4px;padding:8px 4px;">
+          <div style="font-weight:700;font-size:13px;color:#111">${st.pt}</div>
+          <div style="font-size:10px;color:#888">${st.desc}</div>
+          <div style="font-size:12px;color:#111">h=${st.h}</div>
+          <div style="font-size:11px;color:#666">s=${st.s}</div>
+        </div>`).join('');
+
+          document.getElementById('otto-states').innerHTML = [
+            { pt: '1', desc: 'Intake', T: o.T1.toFixed(1), s: o.s1.toFixed(3) },
+            { pt: '2', desc: 'Compress', T: o.T2.toFixed(1), s: o.s2.toFixed(3) },
+            { pt: '3', desc: 'Combust', T: o.T3.toFixed(1), s: o.s3.toFixed(3) },
+            { pt: '4', desc: 'Exhaust', T: o.T4.toFixed(1), s: o.s4.toFixed(3) },
+          ].map(st => `<div style="background:#f8f8f8;border:1px solid #e0e0e0;border-radius:4px;padding:8px 4px;">
+          <div style="font-weight:700;font-size:13px;color:#111">${st.pt}</div>
+          <div style="font-size:10px;color:#888">${st.desc}</div>
+          <div style="font-size:12px;color:#111">T=${st.T} K</div>
+          <div style="font-size:11px;color:#666">s=${st.s}</div>
+        </div>`).join('');
+
+          // Steam table
+          buildSteamTable(payload.t_steam_C);
+
+          // Charts
+          destroyCharts();
+          const losses = payload.mass_flow_air * o.Q_in - o.elec_power_kW - o.therm_power_kW;
+          drawCharts(
+            { elec: o.elec_power_kW, therm: o.therm_power_kW, losses },
+            { feedKg: mb.feed_kg, biogasMass: mb.biogas_mass, digestateDry: mb.digestate_dry, hydrocharKg: mb.hydrochar_kg },
+            { thermPower: ht.therm_power_kW, Q_AD_kW: ht.Q_AD_kW, Q_HTC_kW: ht.Q_HTC_kW },
+            { hA: rk.hA, sA: rk.sA, hB: rk.hB, sB: rk.sB, hC: rk.hC, sC: rk.sC, hD: rk.hD, sD: rk.sD },
+            { T1: o.T1, T2: o.T2, T3: o.T3, T4: o.T4, s1: o.s1, s2: o.s2, s3: o.s3, s4: o.s4 }
+          );
+
+          // Schematic
+          drawSchematic({
+            feedKg: mb.feed_kg, biogasVol: mb.biogas_vol, methaneVol: mb.methane_vol,
+            elecPower: o.elec_power_kW, thermPower: o.therm_power_kW,
+            digestateWet: mb.digestate_wet, digestateDry: mb.digestate_dry,
+            hydrocharKg: mb.hydrochar_kg, htcTemp: payload.htc_temp
+          });
+
+        } catch (err) {
+          console.warn('API call failed, falling back to local calculation:', err);
+          _localRunAnalysis();
+        }
+      };
+    }
+  </script>
+</body>
+
+</html>
