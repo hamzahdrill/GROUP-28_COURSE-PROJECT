@@ -32,6 +32,6 @@ __MACOSX/
 test_api.py
 walkthrough.md
 
-# Generated docs (keep in repo for submission)
-# Group28_AD-HTC_Slides_Final.pptx
-# Group28_AD-HTC_Report.docx
+# Generated docs (excluded from repo)
+*.pptx
+*.docx
